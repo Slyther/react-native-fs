@@ -8,6 +8,7 @@
 #include <sstream>
 #include <stack>
 #include <windows.h>
+#include <cmath>
 #include <winrt/Windows.Storage.FileProperties.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Storage.h>
@@ -977,7 +978,7 @@ IAsyncAction RNFSManager::ProcessDownloadRequestAsync(RN::ReactPromise<RN::JSVal
         int64_t initialProgressTime{ winrt::clock::now().time_since_epoch().count() / 10000 };
         int64_t currentProgressTime;
         uint64_t progressDividerUnsigned{ uint64_t(progressDivider) };
-
+        uint64_t lastProgressValue = -1;
         for (;;)
         {
             buffer.Length(0);
@@ -1016,14 +1017,18 @@ IAsyncAction RNFSManager::ProcessDownloadRequestAsync(RN::ReactPromise<RN::JSVal
             }
             else
             {
-                if (totalRead * 100 / contentLengthForProgress >= progressDividerUnsigned ||
-                    totalRead == contentLengthForProgress) {
-                    m_reactContext.CallJSFunction(L"RCTDeviceEventEmitter", L"emit", L"DownloadProgress",
-                        RN::JSValueObject{
-                            { "jobId", jobId },
-                            { "contentLength", contentLength.Type() == PropertyType::UInt64 ? RN::JSValue(contentLength.Value()) : RN::JSValue{nullptr} },
-                            { "bytesWritten", totalRead },
-                        });
+                uint64_t progress = uint64_t(floor(double(totalRead) / double(contentLengthForProgress) * 100));
+                if (progress % progressDividerUnsigned == 0) {
+                    if(lastProgressValue != progress || totalRead == contentLengthForProgress) {
+                        lastProgressValue = progress;
+                        m_reactContext.CallJSFunction(L"RCTDeviceEventEmitter", L"emit", L"DownloadProgress",
+                            RN::JSValueObject{
+                                { "jobId", jobId },
+                                { "contentLength", contentLength.Type() == PropertyType::UInt64 ? RN::JSValue(contentLength.Value()) : RN::JSValue{nullptr} },
+                                { "bytesWritten", totalRead },
+                            }
+                        );
+                    }
                 }
             }
         }
