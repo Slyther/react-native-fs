@@ -416,15 +416,17 @@ try
 
         promise.Resolve(std::filesystem::exists(path));
     }
+    co_return;
 }
 catch (const hresult_error& ex)
 {
     hresult result{ ex.code() };
     if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
         promise.Resolve(false);
+    } else {
+        // "Failed to check if file or directory exists.
+        promise.Reject(winrt::to_string(ex.message()).c_str());
     }
-    // "Failed to check if file or directory exists.
-    promise.Reject(winrt::to_string(ex.message()).c_str());
 }
 
 
