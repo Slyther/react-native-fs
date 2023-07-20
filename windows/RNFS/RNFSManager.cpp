@@ -414,13 +414,7 @@ try
         bool hasTrailingSlash{ filepath[fileLength - 1] == '\\' || filepath[fileLength - 1] == '/' };
         std::filesystem::path path(hasTrailingSlash ? filepath.substr(0, fileLength - 1) : filepath);
 
-        winrt::hstring directoryPath, fileName;
-        splitPath(filepath, directoryPath, fileName);
-        StorageFolder folder{ co_await StorageFolder::GetFolderFromPathAsync(directoryPath) };
-        if (fileName.size() > 0) {
-            co_await folder.GetItemAsync(fileName);
-        }
-        promise.Resolve(true);
+        promise.Resolve(std::filesystem::exists(path));
     }
 }
 catch (const hresult_error& ex)
